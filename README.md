@@ -60,11 +60,11 @@ python src/create_datasets.py
 
 This command will generate three distinct datasets, each with increasing levels of information in the  [`data`](link) folder : 
 
-1. **Basic Dataset** (`dataset_title_abstract.json`): Contains only the title and abstract for each molecular dynamics dataset.
+1. **Basic Dataset**: Contains only the title and abstract for each molecular dynamics dataset.
 
-2. **Extended Dataset** (`dataset_title_abstract_files.json`): Adds information about the file types and extensions present in each molecular dataset (e.g., .pdb, .gro, .xtc).
+2. **Extended Dataset**: Adds information about the file types and extensions present in each molecular dataset (e.g., .pdb, .gro, .xtc).
 
-3. **Detailed Dataset** (`dataset_title_abstract_files_mdp.json`): Includes specific parameter values from mdp files (such as simulation time, temperature, or integration steps) alongside the title, abstract, and file extensions. 
+3. **Detailed Dataset**: Includes specific parameter values from mdp files (such as simulation time, temperature, or integration steps) alongside the title, abstract, and file extensions. 
 
 ### Embedding Creation
 
