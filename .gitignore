@@ -5,7 +5,7 @@
 chroma_*
 
 # Data
-data/
+data/*
 results/datasets/*
 
 # Byte-compiled / optimized / DLL files
