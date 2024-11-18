@@ -9,18 +9,17 @@ The generated datasets are:
 
 Usage:
 ======
-    python create_datasets.py --dataset_infos <path_to_parquet_file> --file_infos <path_to_file_infos> --gro_infos <path_to_gro_infos> --mdp_infos <path_to_mdp_infos>
-
+    python src/create_datasets.py --dataset_infos <path_to_dataset_infos> --file_infos <path_to_file_infos> --gro_infos <path_to_gro_infos> --mdp_infos <path_to_mdp_infos>
 Arguments:
 ==========
     --dataset_info : str
         Path to the Parquet file containing the full dataset.
     --file_infos : str
-        Path to the directory containing informations about the dataset files.
+        Path to the Parquet file containing informations about the dataset files.
     --gro_infos : str
-        Path to the directory containing informations about the GRO files.
+        Path to the Parquet file containing informations about the GRO files.
     --mdp_infos : str
-        Path to the directory containing informations about the MDP files.
+        Path to the Parquet file containing informations about the MDP files.
 
 Example:
 ========
