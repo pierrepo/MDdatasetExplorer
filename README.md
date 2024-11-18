@@ -40,25 +40,21 @@ conda env create -f environment.yml
 conda activate mddatasetexplorer-env
 ```
 
-### Add Groq API key
-
-Create an `.env` file with a [valid Groq key](https://console.groq.com/keys):
-```text
-OPENAI_API_KEY=<your-groq-api-key>
-```
-
-> Remark: This `.env` file is ignored by git.
-
-
 ### Create Datasets
 
 To create the datasets, you need to run the following command:
 
 ```bash
-python src/create_datasets.py
+python src/create_datasets.py --dataset_infos <path_to_dataset_infos> --file_infos <path_to_file_infos> --gro_infos <path_to_gro_infos> --mdp_infos <path_to_mdp_infos>
 ```
 
-This command will generate three distinct datasets, each with increasing levels of information in the  [`data`](link) folder : 
+Arguments :
+- `dataset_infos` : Path to the parquet file containing the dataset information (id, origin, title, keywords, description, etc)
+- `file_infos` : Path to the parquet file containing the file information (dataset_id, name, extension, etc)
+- `gro_infos` : Path to the parquet file containing the gro information (dataset_id, atome number, presence of molecules, etc)
+- `mdp_infos` : Path to the parquetfile containing the mdp information (dataset_id, dt, nsteps, temperature, etc)
+
+This command will generate three distinct datasets, each with increasing levels of information about the molecular dynamics datasets:
 
 1. **Basic Dataset**: Contains only the title and abstract for each molecular dynamics dataset.
 
@@ -66,34 +62,13 @@ This command will generate three distinct datasets, each with increasing levels 
 
 3. **Detailed Dataset**: Includes specific parameter values from mdp files (such as simulation time, temperature, or integration steps) alongside the title, abstract, and file extensions. 
 
-### Embedding Creation
 
-To create the embeddings, you need to run the following command:
+### Tf-idf Vector Creation
 
-```bash
-python src/create_embeddings.py --dataset <dataset_file_name> --model <embedding_model_name>
-```
-
-This command will generate a set of embeddings stored in the [`embeddings`](link) folder.
-
-
-### Graph Creation
-
-To construct a similarity graph based on dataset embeddings, execute:
+To create the tf-idf vectors for each dataset created, you need to run the following command:
 
 ```bash
-python src/create_graph.py --embeddings <embeddings_file_name> --threshold <threshold_value>
+python src/create_tfidf.py
 ```
 
-This command will generate a graph stored in the [`graphs`](link) folder.
-
-
-## Usage (web interface)
-
-To explore the dataset graph interactively, use the Streamlit app:
-
-```bash
-streamlit run src/streamlit_app.py
-```
-
-This will run the Streamlit app in your web browser. 
+This command will processes JSON files in the results/datasets directory, computes TF-IDF vectors (Term Frequency-Inverse Document Frequency) for the text data, and stores the resulting vectors in the results/tfidf_vectors directory. Each dataset is processed individually, and its vectors are stored in a dedicated Chroma database under results/tfidf_vectors/chroma_db_<dataset_name>.
