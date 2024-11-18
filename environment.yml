@@ -14,6 +14,8 @@ dependencies:
   - black
   - ruff
   # Embeddings tools
+  - nltk
+  - scikit-learn
   - chromadb # Vector storage
   - langchain-groq
   - langchain-core
