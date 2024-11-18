@@ -37,6 +37,7 @@ __version__ = "1.0.0"
 
 
 # LIBRARY IMPORTS
+import os
 import pandas as pd
 import json
 import argparse
@@ -46,7 +47,7 @@ from copy import deepcopy
 from loguru import logger
 
 # CONSTANTS
-OUTPUT_DIR = "data"
+OUTPUT_DIR = "results/datasets"
 
 
 # FUNCTIONS
@@ -85,6 +86,8 @@ def save_json(data: List[Dict], filename: str) -> None:
     filename : str
         The filename for the output JSON file.
     """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
     with open(f"{OUTPUT_DIR}/{filename}", "w") as f:
         json.dump(data, f, indent=2)
     
