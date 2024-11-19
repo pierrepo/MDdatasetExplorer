@@ -197,13 +197,16 @@ if __name__ == "__main__":
 
     # Combine all datasets to create a global vocabulary
     all_documents = [json.dumps(item) for dataset in datasets for item in dataset['json_content']]
-
-    # Initialize and fit the TF-IDF vectorizer on all documents
-    vectorizer = TfidfVectorizer()
-    vectorizer.fit(all_documents)
+    
 
     # Process each dataset
     for dataset in datasets:
+        # Create a specific vocabulary for each dataset
+        docs = [json.dumps(item) for item in dataset['json_content']]
+        # Initialize and fit the TF-IDF vectorizer on the current dataset
+        vectorizer = TfidfVectorizer()
+        vectorizer.fit(docs)
+        # Process the dataset and store the TF-IDF vectors in Chroma
         process_dataset(dataset, vectorizer)
 
     logger.success(f" --- All datasets processed successfully. ---")
