@@ -7,6 +7,7 @@ chroma_*
 # Data
 data/*
 results/datasets/*
+src/bin/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
