@@ -6,6 +6,8 @@ chroma_*
 
 # Data
 data/*
+# Except for the 'img' directory
+!data/img
 results/*
 src/bin/*
 
