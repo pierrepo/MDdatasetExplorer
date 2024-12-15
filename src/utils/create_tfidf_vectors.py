@@ -1,15 +1,15 @@
 """Generate TF-IDF Vectors for Molecular Dynamics Datasets.
 
-This script processes JSON files in the results/datasets directory, computes TF-IDF vectors (Term Frequency-Inverse Document Frequency) for the text data,
-and stores the resulting vectors in the results/tfidf_vectors directory. Each dataset is processed individually, and its vectors are stored
-in a dedicated Chroma database under results/tfidf_vectors/chroma_db_<dataset_name>.
-
-TF-IDF is a statistical measure used to evaluate the importance of a word in a document relative to a collection of documents.
+TF-IDF (Term Frequency-Inverse Document Frequency) is a statistical measure used to evaluate the importance of a word in a document relative to a collection of documents.
 It helps to highlight relevant terms while reducing the weight of common words across all documents.
 
 Usage:
 ======
-    python src/create_tfidf_vectors.py
+    python src/utils/create_tfidf_vectors.py
+
+This command will process JSON files in the results/datasets directory, computes TF-IDF vectors for the text data,
+and stores the resulting vectors in the results/tfidf_vectors directory. Each dataset is processed individually, and its vectors are stored
+in a dedicated Chroma database under results/tfidf_vectors/chroma_db_tfidf_vectors_<dataset_name>.
 """
 
 
@@ -23,6 +23,7 @@ __version__ = "1.0.0"
 
 # LIBRARY IMPORTS
 import os
+import re
 import json
 from tqdm import tqdm
 from typing import List, Dict
@@ -119,12 +120,13 @@ def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name
     dataset_name : str
         The name of the dataset.
     """
+    logger.debug("Storing TF-IDF vectors in Chroma...")
     # Initialize the Chroma client and database
-    chroma_db_path = os.path.join(OUT_DIR, f"chroma_db_{dataset_name}")
+    chroma_db_path = os.path.join(OUT_DIR, f"chroma_db_tfidf_vectors_{dataset_name}")
     client = chromadb.PersistentClient(path=chroma_db_path)
     # Create a new collection for the dataset
     # Use cosine similarity for nearest neighbors
-    db = client.create_collection(name=f"chroma_db_{dataset_name}", metadata={"hnsw:space": "cosine"})
+    db = client.create_collection(name=f"chroma_db_tfidf_vectors_{dataset_name}", metadata={"hnsw:space": "cosine"})
 
     for idx, vector in tqdm(
         enumerate(vectors), 
@@ -137,29 +139,38 @@ def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name
         metadata = dataset_json[idx]
         # Convert metadata values to strings
         metadata_str = {key: str(value) if not isinstance(value, list) else ', '.join(str(v) for v in value) for key, value in metadata.items()}
+        # Use the ID from metadata as the unique identifier
+        unique_id = metadata.get("id", idx)
         # Store the vector and metadata in Chroma
         db.add(
-            ids=[f"{dataset_name}_{idx}"],  # Unique ID for each vector
-            embeddings=vector,  # The actual TF-IDF vector
-            metadatas=[metadata_str],  # The metadata associated with this vector
-            documents=[json.dumps(metadata)]  # Store the document as a JSON string
+            ids=[unique_id],
+            embeddings=vector,
+            metadatas=[metadata_str],
+            documents=[json.dumps(metadata)]
         )
 
     logger.success(f"Stored TF-IDF vectors for {dataset_name} in Chroma successfully.\n")
 
 
-def process_dataset(dataset: dict, vectorizer: TfidfVectorizer) -> None:
+def process_dataset(dataset: dict) -> None:
     """Process a single dataset and generate the corresponding TF-IDF vectors.
     
     Parameters
     ----------
     dataset : dict
         The dataset to process. It contains the file path (`file_path`) and the JSON content (`json_content`).
-    vectorizer : TfidfVectorizer
-        The pre-fitted TF-IDF vectorizer to transform the dataset's documents.
     """
     dataset_name = os.path.basename(dataset['file_path']).replace('.json', '')
     logger.info(f"Processing dataset: {dataset_name}")
+
+     # Create a specific vocabulary for each dataset
+    docs = [json.dumps(item) for item in dataset['json_content']]
+    combined_text = " ".join(docs)
+    unique_vocab = set(re.findall(r'\b\w+\b', combined_text))
+    logger.debug(f"There are {len(unique_vocab)} unique world.")
+    # Initialize and fit the TF-IDF vectorizer on the current dataset
+    vectorizer = TfidfVectorizer()
+    vectorizer.fit(unique_vocab)
 
     # Extract documents and metadata from the dataset's JSON content
     documents = [json.dumps(item) for item in dataset['json_content']]  # Convert each document to JSON string
@@ -179,7 +190,6 @@ def process_dataset(dataset: dict, vectorizer: TfidfVectorizer) -> None:
         vectors.append(generate_tfidf_vectors([document], vectorizer)[0])
     
     # Store vectors and metadata in Chroma
-    logger.debug("Storing TF-IDF vectors in Chroma...")
     store_in_chroma(vectors, dataset['json_content'], dataset_name)
 
 
@@ -198,16 +208,10 @@ if __name__ == "__main__":
     # Combine all datasets to create a global vocabulary
     all_documents = [json.dumps(item) for dataset in datasets for item in dataset['json_content']]
     
-
     # Process each dataset
     for dataset in datasets:
-        # Create a specific vocabulary for each dataset
-        docs = [json.dumps(item) for item in dataset['json_content']]
-        # Initialize and fit the TF-IDF vectorizer on the current dataset
-        vectorizer = TfidfVectorizer()
-        vectorizer.fit(docs)
         # Process the dataset and store the TF-IDF vectors in Chroma
-        process_dataset(dataset, vectorizer)
+        process_dataset(dataset)
 
     logger.success(f" --- All datasets processed successfully. ---")
 
