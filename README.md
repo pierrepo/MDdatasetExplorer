@@ -31,6 +31,8 @@ cd MDdatasetExplorer
 ### Create a Conda environment
 
 ```bash
+conda config --add channels conda-forge
+conda config --add channels defaults
 conda env create -f environment.yml
 ```
 
@@ -40,35 +42,27 @@ conda env create -f environment.yml
 conda activate mddatasetexplorer-env
 ```
 
-### Create Datasets
+## Usage
 
-To create the datasets, you need to run the following command:
-
-```bash
-python src/create_datasets.py --dataset_infos <path_to_dataset_infos> --file_infos <path_to_file_infos> --gro_infos <path_to_gro_infos> --mdp_infos <path_to_mdp_infos>
-```
-
-Arguments :
-- `dataset_infos` : Path to the parquet file containing the dataset information (id, origin, title, keywords, description, etc)
-- `file_infos` : Path to the parquet file containing the file information (dataset_id, name, extension, etc)
-- `gro_infos` : Path to the parquet file containing the gro information (dataset_id, atome number, presence of molecules, etc)
-- `mdp_infos` : Path to the parquetfile containing the mdp information (dataset_id, dt, nsteps, temperature, etc)
-
-This command will generate three distinct datasets, each with increasing levels of information about the molecular dynamics datasets:
-
-1. **Basic Dataset**: Contains only the title and abstract for each molecular dynamics dataset.
-
-2. **Extended Dataset**: Adds information about the file types and extensions present in each molecular dataset (e.g., .pdb, .gro, .xtc).
-
-3. **Detailed Dataset**: Includes specific parameter values from mdp files (such as simulation time, temperature, or integration steps) alongside the title, abstract, and file extensions. 
-
-
-### Tf-idf Vector Creation
-
-To create the tf-idf vectors for each dataset created, you need to run the following command:
+To run the MDdatasetExplorer, you need to run the following command:
 
 ```bash
-python src/create_tfidf.py
+  python src/run_pipeline.py --model_name <model_name> --dataset_name <dataset_name>
 ```
 
-This command will processes JSON files in the results/datasets directory, computes TF-IDF vectors (Term Frequency-Inverse Document Frequency) for the text data, and stores the resulting vectors in the results/tfidf_vectors directory. Each dataset is processed individually, and its vectors are stored in a dedicated Chroma database under results/tfidf_vectors/chroma_db_<dataset_name>.
+Where : 
+- `model_name` is the name of the model to use for embeddings creation.
+- `dataset_name` is the name of the dataset to explore.
+
+Example :
+
+```bash
+  python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "extended"
+```
+
+This command will : 
+  1. **Create datasets** (`src/utils/create_datasets.py`): Load and preprocess datasets from Parquet files.
+  2. **Create TF-IDF vectors** (`src/utils/create_tfidf_vectors.py`): Generate TF-IDF vectors from the preprocessed datasets. [TODO]
+  3. **Create embeddings** (`src/utils/create_embeddings.py`): Generate embeddings using the specified model.
+  4. **Create graph** (`src/utils/create_graph.py`): Create a graph based on the embeddings. [TODO]
+  5. **Create Streamlit app** (`src/utils/streamlit_app.py`): Run Streamlit app to explore the datasets.
