@@ -1,24 +1,17 @@
 name: mddatasetexplorer-env
-channels:
-  - defaults
-  - conda-forge
 dependencies:
   - python=3.11
   - pip
   - python-dotenv # For environment variables
   - jupyterlab>=4
-  # Linters and formaters
-  - pycodestyle
-  - pydocstyle
-  - pylint
-  - black
-  - ruff
+  - concurrent
   # Embeddings tools
   - nltk
   - scikit-learn
+  - pytorch
+  - sentence_transformers
+  - transformers
   - chromadb # Vector storage
-  - langchain-groq
-  - langchain-core
   # Logging
   - loguru
   # IU : Web app
