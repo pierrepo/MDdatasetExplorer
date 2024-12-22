@@ -1,6 +1,6 @@
 """Dataset Creation Script for MDdatasetExplorer.
 
-This script generates multiple dataset files with varying levels of information from a single input dataset in Parquet format.
+This script generates 3 dataset files (JSON) with varying levels of information about molecular dynamics datasets.
 
 The generated datasets are:
 1. `basic_dataset.json`: Contains only the title and abstract of each molecular dynamics dataset.
@@ -13,7 +13,7 @@ Usage:
 Arguments:
 ==========
     --dataset_info : str
-        Path to the Parquet file containing the full dataset.
+        Path to the Parquet file containing the full dataset metadatas.
     --file_infos : str
         Path to the Parquet file containing informations about the dataset files.
     --gro_infos : str
@@ -160,6 +160,8 @@ def generate_datasets(dataset_path: str, files_path: str, gro_path: str, mdp_pat
         
         # Deduce software from file extensions
         software_engines = list(set(file_type_to_engine.get(ext, "unknown") for ext in file_extension))
+        # Remove 'unknown' from the list
+        software_engines = [engine for engine in software_engines if engine != "unknown"]
         
         # Store unique, non-"none" file extensions
         extended_data[i]["file_extensions"] = file_extension if file_extension else ["none"]
@@ -170,32 +172,50 @@ def generate_datasets(dataset_path: str, files_path: str, gro_path: str, mdp_pat
 
     # Detailed Dataset: Extended Dataset + MDP Parameters
     # Load the GRO and MDP information and join with the main dataset on 'dataset_id'
-    gro_df = pd.read_parquet(gro_path).groupby("dataset_id").agg({
-        "atom_number": "first",
-        "has_protein": "max",
-        "has_nucleic": "max",
-        "has_glucid": "max",
-        "has_lipid": "max",
-        "has_water_ion": "max"
-    }).reset_index()
-    mdp_df = pd.read_parquet(mdp_path).groupby("dataset_id").agg({
-        "dt": "first",
-        "nsteps": "first",
-        "temperature": "first",
-        "thermostat": lambda x: next((i for i in x if i not in ["no", "undefined"]), None),
-        "barostat": lambda x: next((i for i in x if i not in ["no", "undefined"]), None)
-    }).reset_index()
+    extended_data = [
+        entry for entry in extended_data 
+        if "mdp" in entry.get("file_extensions", []) and "gro" in entry.get("file_extensions", [])
+    ]
+    valid_dataset_ids = {entry["id"] for entry in extended_data}
+    gro_df = (
+        pd.read_parquet(gro_path)
+        .groupby("dataset_id")
+        .agg({
+            "atom_number": "first",
+            "has_protein": "any",
+            "has_nucleic": "any",
+            "has_glucid": "any",
+            "has_lipid": "any",
+            "has_water_ion": "any"
+        })
+        .reset_index()
+    )
 
-    df = df.merge(gro_df, on="dataset_id", how="left")
-    df = df.merge(mdp_df, on="dataset_id", how="left")
-
+    mdp_df = (
+        pd.read_parquet(mdp_path)
+        .groupby("dataset_id")
+        .agg({
+            "dt": "first",
+            "nsteps": "first",
+            "temperature": "first",
+            "thermostat": lambda x: next((i for i in x if i not in ["no", "undefined"]), "none"),
+            "barostat": lambda x: next((i for i in x if i not in ["no", "undefined"]), "none")
+        })
+        .reset_index()  
+    )
+    # Filter out invalid dataset IDs (have no corresponding GRO or MDP information)
+    gro_df = gro_df[gro_df["dataset_id"].isin(valid_dataset_ids)]
+    mdp_df = mdp_df[mdp_df["dataset_id"].isin(valid_dataset_ids)]
+    # Merge the detailed information with the extended dataset
+    df = df.merge(gro_df, on="dataset_id", how="inner")
+    df = df.merge(mdp_df, on="dataset_id", how="inner")
     detailed_data = deepcopy(extended_data)
+    
     # List of column names that need default handling
     columns_to_check = [
         "atom_number", "has_protein", "has_nucleic", "has_glucid", "has_lipid", 
         "has_water_ion", "dt", "nsteps", "temperature", "thermostat", "barostat"
     ]
-
     # Iterate over each row and update detailed_data
     for i, row in df.iterrows():
         # For each column, check if the value is valid and if not, assign a default value
