@@ -7,18 +7,18 @@ to two dimensions using a specified method (UMAP or t-SNE), and saves the result
 
 Usage
 =====
-    python src/utils/create_2d_projection.py --db_path <path_to_db> --method <method>
+    python src/utils/create_2d_projection.py --db-path <path_to_db> --method <method>
 
 Arguments
 =========
-    --db_path: str
+    --db-path: str
         Path to the Chroma database containing the embeddings to visualize.
     --method: str
         Dimensionality reduction method to use. Must be one of 'umap' or 'tsne'.
 
 Example
 =======
-    python src/utils/create_2d_projection.py --db_path results/embeddings/chroma_db_extended_dataset_all-MiniLM-L6-v2 --method umap
+    python src/utils/create_2d_projection.py --db-path results/embeddings/chroma_db_extended_dataset_all-MiniLM-L6-v2 --method umap
 
 This command will read the embeddings stored in the Chroma database located at "results/embeddings/chroma_db_extended_dataset_all-MiniLM-L6-v2", 
 reduce their dimensionality to two dimensions using UMAP, and save the resulting 2D coordinates to "results/2d_projections/chroma_db_extended_all-MiniLM-L6-v2_umap.npy".
@@ -34,7 +34,6 @@ __version__ = "1.0.0"
 
 # LIBRARY IMPORTS
 import os
-import tqdm
 import argparse
 import numpy as np
 
@@ -56,16 +55,17 @@ def get_args() -> Tuple[str, str]:
 
     Returns
     -------
-    model_name : str
-        The name of the transformer model to use for generating embeddings.
+    Tuple[str, str]
+        - db_path: Path to the Chroma database containing the embeddings to visualize.
+        - method: Dimensionality reduction method to use.
     """
     logger.info("Parsing command-line arguments...")
     parser = argparse.ArgumentParser(description="Generate 2D projections of embeddings for visualization.")
-    parser.add_argument("--db_path", type=str, required=True, help="Path to the Chroma database containing the embeddings to visualize.")
+    parser.add_argument("--db-path", type=str, required=True, help="Path to the Chroma database containing the embeddings to visualize.")
     parser.add_argument("--method", type=str, required=True, choices=METHODS, help="Dimensionality reduction method to use.")
     args = parser.parse_args()
 
-    logger.debug(f"db_path: {args.db_path}")
+    logger.debug(f"db-path: {args.db_path}")
     logger.debug(f"method: {args.method}")
     logger.success("Command-line arguments parsed successfully. \n")
 
