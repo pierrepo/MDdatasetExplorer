@@ -183,22 +183,46 @@ def clean_and_concatenate(data: dict, excluded_keys=None, words_to_remove=None) 
         The cleaned and concatenated string.
     """
     if excluded_keys is None:
-        excluded_keys = ['id', 'origin', 'author', 'date_creation']
+        excluded_keys = ['id', 'origin', 'author', 'date_creation', 'url', 'dt', 'nsteps', 'temperature']
     
     if words_to_remove is None:
         words_to_remove = ["None", "none", "Unknown", "n/a", "undefined"]
 
-    # Filter out excluded keys and concatenate the remaining values
-    concatenated_text = " ".join(
-        str(value) for key, value in data.items() 
-        if key not in excluded_keys and value
-    )
+    # Filter out excluded keys and prepare the list to concatenate
+    concatenated_text_parts = []
+
+    for key, value in data.items():
+        # Exclude the keys that are in the excluded list
+        if key in excluded_keys:
+            continue
+        
+        # If the attribute starts with "is" and is True, include it
+        if key.startswith("has") and value is True:
+            concatenated_text_parts.append(key)
+        
+        # Handle atom_number specially
+        elif key == "atom_number":
+            concatenated_text_parts.append(f"{key}={value}")
+
+        # If the value is a list, concatenate its elements into a string
+        elif isinstance(value, list):
+            concatenated_text_parts.append(" ".join(str(item) for item in value))
+        
+        # If the value is truthy (not None, empty, etc.), add it to the concatenated string
+        elif value:
+            concatenated_text_parts.append(str(value))
+    
+    # Join the parts into a single string
+    concatenated_text = " ".join(concatenated_text_parts)
 
     # Remove unwanted words/phrases
     for word in words_to_remove:
         concatenated_text = concatenated_text.replace(word, "")
     
-    return concatenated_text.strip()
+    # Trim any leading/trailing spaces
+    cleaned_text = concatenated_text.strip()
+
+    return cleaned_text
 
 
 def process_batch(batch: List[str], model: torch.nn.Module, tokenizer: AutoTokenizer = None) -> List[List[float]]:
