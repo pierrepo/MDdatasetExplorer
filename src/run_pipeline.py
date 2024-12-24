@@ -1,33 +1,50 @@
 """Run the MdDatasetExplorer pipeline.
 
-This script runs the pipeline to process datasets, generate embeddings using a specified model and run Streamlit app to explore the datasets.
+This script runs the pipeline to process datasets, generate embeddings using a specified model, 
+create an interactive 2D plot, generate a graph, and launch a Streamlit app to explore datasets.
 
 The pipeline consists of the following steps:
-    1. Create datasets (src/utils/create_datasets.py): Load and preprocess datasets from Parquet files.
-    2. Create TF-IDF vectors (src/utils/create_tfidf_vectors.py): Generate TF-IDF vectors from the preprocessed datasets. [TODO]
-    3. Create embeddings (src/utils/create_embeddings.py): Generate embeddings using the specified model.
-    4. Create graph (src/utils/create_graph.py): Create a graph based on the embeddings. [TODO]
-    5. Create Streamlit app (src/utils/streamlit_app.py): Run Streamlit app to explore the datasets.
+    1. **Create Datasets** (`src/utils/create_datasets.py`): Load and preprocess datasets from Parquet files.
+    2. **Generate Embeddings** (`src/utils/create_embeddings.py`): Generate embeddings using the specified model.
+    3. **Create Interactive Plot** (`src/utils/create_interactive_plot.py`): Reduce the dimensionality of the embeddings, cluster them, and create an interactive 2D plot.
+    4. **Generate Graph** (`src/utils/create_graph.py`): Create a graph where connections between nodes are based on distances in the embedding space.
+    5. **Launch Streamlit App** (`src/utils/streamlit_app.py`): Run a Streamlit app to explore datasets through two approaches:
+       - Visualization of dimensionality-reduced embeddings (2D interactive plot).
+       - Graph-based exploration where connections between data points represent their distances in the embedding space.
+
 
 Usage:
 ======
-    python src/run_pipeline.py --model_name <model_name> --dataset_name <dataset_name>
+    python src/run_pipeline.py --model-name <model_name> --dataset-name <dataset_name> 
+                                --reduction-method <reduction-method> --cluster-method <cluster_method>
 
 Arguments:
 ==========
-    - model_name (str): Name of the model to use for embeddings generation. Choose one of the following:
-    ["BERT", "SciBERT", "BioBERT", "SciNCL", "SBERT", "PubMedBERT", "all-MiniLM-L6-v2"]
-    - dataset_name (str): Name of the dataset to use for embeddings generation. Choose one of the following:
-    ["basic", "extended", "detailed"]
-
+    - `model_name` (str): Name of the model to use for embeddings generation. Choose one of the following:
+      ["BERT", "SciBERT", "BioBERT", "SciNCL", "SBERT", "PubMedBERT", "all-MiniLM-L6-v2"]
+    - `dataset_name` (str): Name of the dataset to use for embeddings generation. Choose one of the following:
+      ["basic", "extended", "detailed"]
+    - `reduction_method` (str): Dimensionality reduction technique to apply. Choose one of the following:
+      ["umap", "tsne"]
+    - `cluster_method` (str): Clustering algorithm to apply. Choose one of the following:
+      ["knn", "hdbscan"]
 
 Example:
 ========
-    python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "extended"
+    python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "extended" 
+                                --reduction_method "umap" --cluster_method "knn"
+
+This command will : 
+    1. Create datasets as JSON files in the `results/datasets` directory.
+    2. Create embeddings using the `all-MiniLM-L6-v2` model for the `extended` dataset in the `results/embeddings` directory.
+    3. Create an interactive plot (HTML) of the embeddings reduced using UMAP and clustered with KNN in the `results/plots` directory.
+    4. Create a graph of the embeddings in the `results/graphs` directory.
+    5. Launch a Streamlit app to explore the datasets.
+
 """
 
 
-# METADATA
+# METADATAS
 __authors__ = ("Pierre Poulain", "Essmay Touami")
 __contact__ = "pierre.poulain@u-paris.fr"
 __copyright__ = "BSD-3 clause"
@@ -48,6 +65,9 @@ MODEL_EMBEDDINGS_NAMES = [
     "BERT", "SciBERT", "BioBERT", "SciNCL", "SBERT", 
     "PubMedBERT", "all-MiniLM-L6-v2"
 ]
+DATASET_NAMES = ["basic", "extended", "detailed"]
+REDUCTION_METHODS = ["umap", "tsne"]
+CLUSTER_METHODS = ["knn", "hdbscan"]
 
 
 # FUNCTIONS
@@ -73,7 +93,7 @@ def run_command(command: List[str]) -> None:
         raise
 
 
-def main(model_name: str, dataset_name: str) -> None:
+def main(model_name: str, dataset_name: str, reduction_method: str, cluster_method: str) -> None:
     """
     Main function to execute the pipeline.
 
@@ -82,15 +102,15 @@ def main(model_name: str, dataset_name: str) -> None:
     model_name : str
         Name of the model to use for embeddings generation.
     dataset_name : str
-        Name of the dataset to use for embeddings generation.        
+        Name of the dataset to use for embeddings generation.
+    reduc_method : str
+        Dimensionality reduction technique to apply.
+    cluster_method : str
+        Clustering algorithm to apply.   
     """
     logger.info(" === Starting MdDatasetExplorer pipeline === ")
     # Steps to execute
     try:
-        # Check if model name is valid
-        if model_name not in MODEL_EMBEDDINGS_NAMES:
-            raise ValueError(f"Invalid model name. Choose one of the following: {MODEL_EMBEDDINGS_NAMES}")
-
         # Step 1: Create datasets
         logger.info("Step 1: Creating datasets...")
         run_command([
@@ -102,27 +122,29 @@ def main(model_name: str, dataset_name: str) -> None:
             "--engine_info", "data/file_types.yml"
         ])
 
-        # Step 2: Create TF-IDF vectors
-        #logger.info("Step 2: Creating TF-IDF vectors...")
-        #run_command([
-        #    "python", "src/utils/create_tfidf_vectors.py"
-        #])
-
-        # Step 3: Create embeddings using the specified model
-        logger.info(f"Step 3: Creating embeddings using model {model_name}...")
+        # Step 2: Create embeddings using the specified model
+        logger.info(f"Step 2: Creating embeddings using model {model_name}...")
         run_command([
             "python", "src/utils/create_embeddings.py",
             "--model_name", model_name,
             "--dataset_file_name", f"{dataset_name}_dataset.json"
         ])
 
-        # Step 4: Create graph based on embeddings
-        #logger.info("Step 4: Creating graph based on embeddings...")
-        #run_command([
-        #    "python", "src/utils/create_graph.py",
-        #    "--model_name", model_name
-        #])
+        # Step 3: Create interactive plot based on embeddings
+        logger.info("Step 3: Creating interactive plot based on embeddings...")
+        run_command([
+            "python", "src/utils/create_interactive_plot.py",
+            "--db-path", f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}",
+            "--reduction_method", reduction_method,
+            "--cluster_method", cluster_method
+        ])
 
+        # Step 4: Create graph based on embeddings
+        logger.info("Step 4: Creating graph based on embeddings...")
+        run_command([
+            "python", "src/utils/create_graph.py",
+            "--db-path", f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}",
+        ])
 
         # Step 5: Run Streamlit app
         logger.info("Step 5: Running Streamlit app...")
@@ -141,9 +163,11 @@ def main(model_name: str, dataset_name: str) -> None:
 if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description="Run the MdDatasetExplorer pipeline.")
-    parser.add_argument("--model_name", type=str, required=True, help="Name of the model to use for embeddings generation.")
-    parser.add_argument("--dataset_name", type=str, required=True, help="Name of the dataset to use for embeddings generation.")
+    parser.add_argument("--model_name", type=str, required=True, help="Name of the model to use for embeddings generation.", choices=MODEL_EMBEDDINGS_NAMES)
+    parser.add_argument("--dataset_name", type=str, required=True, help="Name of the dataset to use for embeddings generation.", choices=DATASET_NAMES)
+    parser.add_argument("--reduction_method", type=str, required=True, help="Dimensionality reduction technique to apply.", choices=REDUCTION_METHODS)
+    parser.add_argument("--cluster_method", type=str, required=True, help="Clustering algorithm to apply.", choices=CLUSTER_METHODS)
     args = parser.parse_args()
 
     # Run the pipeline
-    main(args.model_name, args.dataset_name)
+    main(args.model_name, args.dataset_name, args.reduction_method, args.cluster_method)
