@@ -26,7 +26,6 @@ This command will generate embeddings for all datasets in the extended_dataset.j
 The resulting embeddings will be stored in the results/embeddings directory in a Chroma database named chroma_db_extended_dataset_Scibert.
 """
 
-
 # METADATA
 __authors__ = ("Pierre Poulain", "Essmay Touami")
 __contact__ = "pierre.poulain@u-paris.fr"
@@ -63,7 +62,7 @@ SUPPORTED_MODELS = {
     "SciNCL": "malteos/scincl",
     "SBERT": "sentence-transformers/all-mpnet-base-v2",
     "PubMedBERT": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
-    "all-MiniLM-L6-v2" : "sentence-transformers/all-MiniLM-L6-v2"
+    "all-MiniLM-L6-v2": "sentence-transformers/all-MiniLM-L6-v2",
 }
 
 
@@ -77,19 +76,21 @@ def get_args() -> str:
         The name of the transformer model to use for generating embeddings.
     """
     logger.info("Parsing command-line arguments...")
-    parser = argparse.ArgumentParser(description="Generate embeddings for datasets using a transformer model.")
+    parser = argparse.ArgumentParser(
+        description="Generate embeddings for datasets using a transformer model."
+    )
     parser.add_argument(
         "--model_name",
         type=str,
         choices=SUPPORTED_MODELS.keys(),
         required=True,
-        help=f"The name of the model to use for generating embeddings. Supported models: {', '.join(SUPPORTED_MODELS.keys())}."
+        help=f"The name of the model to use for generating embeddings. Supported models: {', '.join(SUPPORTED_MODELS.keys())}.",
     )
     parser.add_argument(
         "--dataset_file_name",
         type=str,
         required=True,
-        help="The name of the JSON file containing the datasets to process."
+        help="The name of the JSON file containing the datasets to process.",
     )
     args = parser.parse_args()
 
@@ -108,7 +109,7 @@ def load_json_file(file_path: str) -> Dict[str, dict]:
     ----------
     file_path : str
         The path to the JSON file to load.
-    
+
     Returns
     -------
     Dict[str, dict]
@@ -116,19 +117,16 @@ def load_json_file(file_path: str) -> Dict[str, dict]:
     """
     logger.info(f"Loading JSON file from {file_path}...")
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             json_content = json.load(file)
             dataset_count = len(json_content) if isinstance(json_content, list) else 1
             logger.debug(f"File: {file_path} | Number of datasets: {dataset_count}")
             logger.success(f"Loaded JSON file successfully: {file_path} \n")
-            return {
-                'file_path': file_path,
-                'json_content': json_content
-            }
+            return {"file_path": file_path, "json_content": json_content}
     except json.JSONDecodeError as e:
         logger.error(f"Error decoding {file_path}: {e}")
         raise ValueError(f"Failed to load JSON file at {file_path}") from e
-   
+
 
 def load_model(model_path: str) -> Tuple[torch.nn.Module, AutoTokenizer]:
     """
@@ -153,14 +151,18 @@ def load_model(model_path: str) -> Tuple[torch.nn.Module, AutoTokenizer]:
         # Load a SentenceTransformer model
         model = SentenceTransformer(model_path)
         vector_dim = model.get_sentence_embedding_dimension()
-        logger.success(f"SentenceTransformer model '{model_path}' loaded successfully with vector dimension {vector_dim}. \n")
+        logger.success(
+            f"SentenceTransformer model '{model_path}' loaded successfully with vector dimension {vector_dim}. \n"
+        )
     else:
         # Load a Transformer model and tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         model = AutoModel.from_pretrained(model_path)
         vector_dim = model.config.hidden_size
-        logger.success(f"HuggingFace model '{model_path}' loaded successfully with vector dimension {vector_dim}. \n")
-    
+        logger.success(
+            f"HuggingFace model '{model_path}' loaded successfully with vector dimension {vector_dim}. \n"
+        )
+
     return model, tokenizer
 
 
@@ -183,8 +185,19 @@ def clean_and_concatenate(data: dict, excluded_keys=None, words_to_remove=None) 
         The cleaned and concatenated string.
     """
     if excluded_keys is None:
-        excluded_keys = ['id', 'origin', 'author', 'date_creation', 'url', 'dt', 'nsteps', 'temperature']
-    
+        excluded_keys = [
+            "id",
+            "origin",
+            "author",
+            "date_creation",
+            "url",
+            "dt",
+            "nsteps",
+            "temperature",
+            "thermostat",
+            "barostat",
+        ]
+
     if words_to_remove is None:
         words_to_remove = ["None", "none", "Unknown", "n/a", "undefined"]
 
@@ -195,11 +208,11 @@ def clean_and_concatenate(data: dict, excluded_keys=None, words_to_remove=None) 
         # Exclude the keys that are in the excluded list
         if key in excluded_keys:
             continue
-        
+
         # If the attribute starts with "is" and is True, include it
         if key.startswith("has") and value is True:
             concatenated_text_parts.append(key)
-        
+
         # Handle atom_number specially
         elif key == "atom_number":
             concatenated_text_parts.append(f"{key}={value}")
@@ -207,49 +220,61 @@ def clean_and_concatenate(data: dict, excluded_keys=None, words_to_remove=None) 
         # If the value is a list, concatenate its elements into a string
         elif isinstance(value, list):
             concatenated_text_parts.append(" ".join(str(item) for item in value))
-        
+
         # If the value is truthy (not None, empty, etc.), add it to the concatenated string
         elif value:
             concatenated_text_parts.append(str(value))
-    
+
     # Join the parts into a single string
     concatenated_text = " ".join(concatenated_text_parts)
 
     # Remove unwanted words/phrases
     for word in words_to_remove:
         concatenated_text = concatenated_text.replace(word, "")
-    
+
     # Trim any leading/trailing spaces
     cleaned_text = concatenated_text.strip()
 
     return cleaned_text
 
 
-def process_batch(batch: List[str], model: torch.nn.Module, tokenizer: AutoTokenizer = None) -> List[List[float]]:
-        """Process a single batch to generate embeddings.
-        
-        Parameters
-        ----------
-        batch : List[str]
-            A list of texts to generate embeddings for.
-        model : torch.nn.Module
-            The transformer model to use for generating embeddings.
-        tokenizer : AutoTokenizer or None
-            The tokenizer for the model, or None if using SentenceTransformer.
-        """
-        embeddings = []
-        if tokenizer:  # For Transformers
-            with torch.no_grad():
-                inputs = tokenizer(batch, return_tensors="pt", truncation=True, padding=True, max_length=model.config.max_position_embeddings).to(model.device)
-                outputs = model(**inputs)
-                batch_embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy()  # [CLS] token
-                embeddings.extend(batch_embeddings)
-        else:  # For SentenceTransformer
-            embeddings = model.encode(batch, show_progress_bar=False, device=model.device)
-        return embeddings
+def process_batch(
+    batch: List[str], model: torch.nn.Module, tokenizer: AutoTokenizer = None
+) -> List[List[float]]:
+    """Process a single batch to generate embeddings.
+
+    Parameters
+    ----------
+    batch : List[str]
+        A list of texts to generate embeddings for.
+    model : torch.nn.Module
+        The transformer model to use for generating embeddings.
+    tokenizer : AutoTokenizer or None
+        The tokenizer for the model, or None if using SentenceTransformer.
+    """
+    embeddings = []
+    if tokenizer:  # For Transformers
+        with torch.no_grad():
+            inputs = tokenizer(
+                batch,
+                return_tensors="pt",
+                truncation=True,
+                padding=True,
+                max_length=model.config.max_position_embeddings,
+            ).to(model.device)
+            outputs = model(**inputs)
+            batch_embeddings = (
+                outputs.last_hidden_state[:, 0, :].cpu().numpy()
+            )  # [CLS] token
+            embeddings.extend(batch_embeddings)
+    else:  # For SentenceTransformer
+        embeddings = model.encode(batch, show_progress_bar=False, device=model.device)
+    return embeddings
 
 
-def generate_embeddings(tokenizer, model, texts, batch_size=16, num_workers=-1) -> List[List[float]]:
+def generate_embeddings(
+    tokenizer, model, texts, batch_size=16, num_workers=-1
+) -> List[List[float]]:
     """Generate embeddings for a list of texts using the specified model and tokenizer, with parallel processing.
 
     Parameters
@@ -274,13 +299,26 @@ def generate_embeddings(tokenizer, model, texts, batch_size=16, num_workers=-1) 
     cleaned_texts = [clean_and_concatenate(json.loads((text))) for text in texts]
 
     # Split passages into batches
-    batches = [cleaned_texts[i:i + batch_size] for i in range(0, len(cleaned_texts), batch_size)]
+    batches = [
+        cleaned_texts[i : i + batch_size]
+        for i in range(0, len(cleaned_texts), batch_size)
+    ]
 
     # Parallel processing
     embeddings = []
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        futures = {executor.submit(process_batch, batch, model, tokenizer): batch for batch in batches}
-        for future in tqdm(as_completed(futures), total=len(batches), desc="Generating embeddings", ncols=100, colour="blue", unit="batch"):
+        futures = {
+            executor.submit(process_batch, batch, model, tokenizer): batch
+            for batch in batches
+        }
+        for future in tqdm(
+            as_completed(futures),
+            total=len(batches),
+            desc="Generating embeddings",
+            ncols=100,
+            colour="blue",
+            unit="batch",
+        ):
             try:
                 embeddings.extend(future.result())
             except Exception as e:
@@ -293,9 +331,11 @@ def generate_embeddings(tokenizer, model, texts, batch_size=16, num_workers=-1) 
     return embeddings
 
 
-def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name: str, model_name: str) -> None:
+def store_in_chroma(
+    vectors: List[List[float]], dataset_json: dict, dataset_name: str, model_name: str
+) -> None:
     """Store embeddings and corresponding metadata in a Chroma database.
-    
+
     Parameters
     ----------
     vectors : List[List[float]]
@@ -305,7 +345,7 @@ def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name
     dataset_name : str
         The name of the dataset.
     model_name : str
-        The name of the model used to generate the embeddings.    
+        The name of the model used to generate the embeddings.
     """
     # Create the output directory if it does not exist
     if not os.path.exists(OUT_DIR):
@@ -315,9 +355,17 @@ def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name
     client = chromadb.PersistentClient(path=chroma_db_path)
     # Create a new collection with the dataset name and model name
     # Use cosine similarity to search for similar embeddings
-    embedding_model = "all-mpnet-base-v2" if model_name != "all-MiniLM-L6-v2"  else "all-MiniLM-L6-v2"
-    embdedding_fun = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=embedding_model)
-    db = client.create_collection(name=f"chroma_db_{dataset_name}_{model_name}", metadata={"hnsw:space": "cosine"}, embedding_function=embdedding_fun)
+    embedding_model = (
+        "all-mpnet-base-v2" if model_name != "all-MiniLM-L6-v2" else "all-MiniLM-L6-v2"
+    )
+    embdedding_fun = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name=embedding_model
+    )
+    db = client.create_collection(
+        name=f"chroma_db_{dataset_name}_{model_name}",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=embdedding_fun,
+    )
 
     for idx, vector in tqdm(
         enumerate(vectors),
@@ -325,7 +373,7 @@ def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name
         total=len(vectors),
         unit="vector",
         ncols=100,
-        colour="blue"
+        colour="blue",
     ):
         metadata = dataset_json[idx]
         unique_id = metadata.get("id", idx)
@@ -334,14 +382,16 @@ def store_in_chroma(vectors: List[List[float]], dataset_json: dict, dataset_name
             ids=[unique_id],
             embeddings=vector,
             metadatas=[metadata_str],
-            documents=[json.dumps(metadata)]
+            documents=[json.dumps(metadata)],
         )
-    logger.success(f"Stored embeddings for {dataset_name} using {model_name} in Chroma successfully.\n")
+    logger.success(
+        f"Stored embeddings for {dataset_name} using {model_name} in Chroma successfully.\n"
+    )
 
 
 def process_dataset(dataset: dict, tokenizer, model, model_name: str) -> None:
     """Process a single dataset and generate the corresponding embeddings.
-    
+
     Parameters
     ----------
     dataset : dict
@@ -353,22 +403,18 @@ def process_dataset(dataset: dict, tokenizer, model, model_name: str) -> None:
     model_name : str
         The name of the model used to generate the embeddings.
     """
-    dataset_name = os.path.basename(dataset['file_path']).replace('.json', '')
+    dataset_name = os.path.basename(dataset["file_path"]).replace(".json", "")
     logger.info(f"Processing dataset: {dataset_name} with model: {model_name}")
 
     # Extract documents from the dataset
-    documents = [json.dumps(item) for item in dataset['json_content']]
+    documents = [json.dumps(item) for item in dataset["json_content"]]
 
     # Generate embeddings for the documents
     embeddings = generate_embeddings(
-            tokenizer=tokenizer,
-            model=model,
-            texts=documents,
-            batch_size=16,
-            num_workers=4
-        )
+        tokenizer=tokenizer, model=model, texts=documents, batch_size=16, num_workers=4
+    )
     # Store the embeddings in Chroma
-    store_in_chroma(embeddings, dataset['json_content'], dataset_name, model_name)
+    store_in_chroma(embeddings, dataset["json_content"], dataset_name, model_name)
 
 
 # MAIN PROGRAM
@@ -379,7 +425,7 @@ if __name__ == "__main__":
 
     # Load the transformer model
     model, tokenizer = load_model(model_path)
-    
+
     # Load dataset from JSON file
     dataset = load_json_file(f"{IN_DIR}/{dataset_file_name}")
 
