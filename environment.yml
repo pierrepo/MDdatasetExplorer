@@ -32,6 +32,6 @@ dependencies:
       - langchain_core
       - langchain_openai
       - sentence_transformers
-      - concurrent
+      - futures
 
 
