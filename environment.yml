@@ -1,10 +1,9 @@
-name: mddatasetexplorer-env
+name: mddatasetexplorer_env
 dependencies:
   - python=3.11
   - pip
   - python-dotenv # For environment variables
   - jupyterlab>=4
-  - concurrent
   # Reduction methods
   - umap-learn
   - hdbscan
@@ -15,11 +14,8 @@ dependencies:
   - nltk
   - scikit-learn
   - pytorch
-  - sentence_transformers
   - transformers
-  - langchain_core
   - langchain
-  - langchain_openai
   - tiktoken
   - chromadb # Vector storage
   # Logging
@@ -33,3 +29,9 @@ dependencies:
       # watermark: keep track of dependency versions
       - watermark
       - datamapplot
+      - langchain_core
+      - langchain_openai
+      - sentence_transformers
+      - concurrent
+
+
