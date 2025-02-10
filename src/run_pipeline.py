@@ -132,8 +132,8 @@ def main(model_name: str, dataset_name: str, reduction_method: str, cluster_meth
         run_command([
             "python", "src/utils/create_interactive_plot.py",
             "--db-path", f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}",
-            "--reduction_method", reduction_method,
-            "--cluster_method", cluster_method
+            "--reduction-method", reduction_method,
+            "--cluster-method", cluster_method
         ])
 
         # Step 4: Run Streamlit app
