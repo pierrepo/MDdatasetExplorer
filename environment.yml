@@ -5,12 +5,22 @@ dependencies:
   - python-dotenv # For environment variables
   - jupyterlab>=4
   - concurrent
+  # Reduction methods
+  - umap-learn
+  - hdbscan
+  - scikit-learn
+  # Visualization
+  - matplotlib
   # Embeddings tools
   - nltk
   - scikit-learn
   - pytorch
   - sentence_transformers
   - transformers
+  - langchain_core
+  - langchain
+  - langchain_openai
+  - tiktoken
   - chromadb # Vector storage
   # Logging
   - loguru
@@ -18,6 +28,8 @@ dependencies:
   - streamlit
   # Graph
   - networkx
+  - pyvis
   - pip:
       # watermark: keep track of dependency versions
       - watermark
+      - datamapplot
