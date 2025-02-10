@@ -47,17 +47,20 @@ conda activate mddatasetexplorer-env
 To run the MDdatasetExplorer, you need to run the following command:
 
 ```bash
-  python src/run_pipeline.py --model_name <model_name> --dataset_name <dataset_name>
+  python src/run_pipeline.py --model_name <model_name> --dataset_name <dataset_name> --reduction_method <reduction_method> --cluster_method <cluster_method>
 ```
 
 Where : 
 - `model_name` is the name of the model to use for embeddings creation.
 - `dataset_name` is the name of the dataset to explore.
+- `reduction_method` is the method to use for dimensionality reduction. Choose between `umap` and `tsne`.
+- `cluster_method` is the method to use for clustering. Choose between `knn` and `dbscan`.
+
 
 Example :
 
 ```bash
-  python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "extended"
+  python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "basic" --reduction_method "umap" --cluster_method "knn"
 ```
 
 This command will : 
