@@ -28,6 +28,7 @@ This command will:
 - Reduce the dimensionality of the embeddings to 2D using UMAP.
 - Perform clustering using HDBSCAN.
 - Generate descriptive cluster names using GPT-4 (OpenAI) based on the titles of the embeddings in each cluster.
+- Save coordinates of the reduced embeddings and cluster labels to `plot_extended_dataset_all-MiniLM-L6-v2_umap_hdbscan.npy`
 - Generate an interactive 2D plot using `datamapplot` with clustered data.
 - Save the HTML plot to `results/2d_projections/plot_extended_dataset_all-MiniLM-L6-v2_umap_hdbscan.html`.
 """
@@ -44,12 +45,14 @@ __version__ = "1.0.0"
 import os
 import argparse
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from typing import Tuple, List, Dict, Union
 from dotenv import load_dotenv
 
 import umap
 import chromadb
+import tiktoken
 import datamapplot as dmp
 from loguru import logger
 from hdbscan import HDBSCAN
@@ -237,8 +240,12 @@ def get_cluster_name(cluster_id: int, titles: list, clusters: list, used_titles:
     str
         Descriptive name for the cluster.
     """
+    # Check if the cluster ID is -1 (representing outliers)
+    if cluster_id == -1:
+        return "Others"
+    
     # Filter out titles that belong to the current cluster
-    cluster_titles = [titles[i] for i in range(len(titles)) if clusters[i] == cluster_id]
+    cluster_titles = [titles[i] for i in range(len(titles)) if clusters[i] == cluster_id and clusters[i] != -1]
 
     # Create a string of the filtered titles
     titles_str = ", ".join(cluster_titles)
@@ -247,11 +254,18 @@ def get_cluster_name(cluster_id: int, titles: list, clusters: list, used_titles:
     prompt_template = """
     You are an expert in the field of molecular dynamics (MD) and have been asked to name a new cluster of MD datasets.
     Generate a brief (2 or 3 words max) and descriptive name for the following cluster based on the titles: {titles}.
+    Ensure that Dynamics, Cluster, Realm, Simulation words are not strictly included in the name.
     Ensure the generated name is not identical to any of the following previously generated names: {used_titles}.
     """
 
     prompt = PromptTemplate(input_variables=["titles", "used_titles"], template=prompt_template)
-    
+    # Verify tokens limitation (16385 tokens)
+    enc = tiktoken.encoding_for_model("gpt-4o")
+    prompt_tokens = enc.encode(str(prompt))
+    if len(prompt_tokens) > 16385:
+        to_remove = (len(prompt_tokens) - 16385) *  4
+        prompt = prompt_template[:-to_remove]
+
     # Set up the LLM and chain
     llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY)
     chain = prompt | llm | StrOutputParser()
@@ -346,7 +360,7 @@ def save_cluster_data_to_npy(
     logger.success(f"Coords, clusters and metadatas saved to {out_file} successfully. \n")
 
 
-def plot_2d_clusters(
+def plot_and_save_2d_clusters(
     coords: np.ndarray, 
     metadatas: np.ndarray, 
     cluster_names: np.ndarray, 
@@ -371,21 +385,67 @@ def plot_2d_clusters(
     # Prepare data for datamapplot
     titles = np.array([meta.get('title', 'No Title') for meta in metadatas])
     urls = np.array([str(meta.get('url', 'No URL')) for meta in metadatas])
-    
+    descriptions = np.array([meta.get('description', 'No Description') for meta in metadatas], dtype=object)
+    authors = np.array([meta.get('author', 'No Authors') for meta in metadatas], dtype=object)
+    keywords = np.array([meta.get('keywords', 'No Keywords') for meta in metadatas], dtype=object)
+    origins = np.array([meta.get('origin', 'No Origin') for meta in metadatas], dtype=object)
+    date_creations = np.array([meta.get('date_creation', 'No Date').split("-")[0] for meta in metadatas], dtype=object)
+    software_engines = np.array([meta.get('software_engines', 'No Software Engine')  for meta in metadatas], dtype=object)
+    first_software_engines = np.array([eval(engine)[0] if engine != 'No Software Engine' else engine for engine in software_engines], dtype=object)
+
+    # create dataframe for extra data
+    extra_data = pd.DataFrame({
+        'idx': idx,
+        'cluster_name': cluster_names,
+        'title': titles,
+        'url': urls,
+        'description': descriptions,
+        'authors': authors,
+        'keywords': keywords,
+        'origin': origins,
+        'date_creation': date_creations,
+        'software_engine': first_software_engines
+    })
+
+    badge_css = """
+        border-radius:6px;
+        width:fit-content;
+        max-width:75%;
+        margin:2px;
+        padding: 2px 10px 2px 10px;
+        font-size: 10pt;
+    """
+    hover_text_template = f"""
+    <div>
+        <div style="background-color:grey;color:#fff;{badge_css}">{{cluster_name}}</div>
+        <div style="font-size:11pt;padding:2px;"><B>Title</B>: {{hover_text}}</div>
+        <div style="font-size:9pt;padding:2px;"> <B>Author(s)</B>: {{authors}}</div>
+        <div style="font-size:9pt;padding:2px;""> <B>Keywords</B>: {{keywords}}</div>
+        <div style="font-size:10pt;padding:2px;"> <B>Description</B>: {{description}}</div>
+    </div>
+    """
 
     # Create the plot
     plot = dmp.create_interactive_plot(
-        coords,
-        cluster_names,
-        hover_text = titles,
-        cluster_boundary_line_width=6
+            coords,
+            cluster_names,
+            hover_text = titles,
+            initial_zoom_fraction=0.9,
+            cluster_boundary_line_width=6,
+            extra_point_data= extra_data,
+            enable_search=True,
+            search_field="title",
+            hover_text_html_template=hover_text_template,
+            cluster_boundary_polygons=True,
+            colormaps={"Date": extra_data.date_creation, "Software": extra_data.software_engine, "Origin": extra_data.origin},
+            on_click="window.open(`{url}`)",
     )
     
     # Save the plot as an HTML file
     if not os.path.exists(OUT_DIR):
         os.makedirs(OUT_DIR)
     base_name = os.path.basename(db_path)
-    full_output_path = os.path.join(OUT_DIR, f"plot_{os.path.splitext(base_name)[0]}.html")
+    full_output_path = os.path.join(OUT_DIR, f"plot_{os.path.splitext(base_name)[0]}_{reduction_method}_{cluster_method}.html")
     plot.save(full_output_path)
     logger.success(f"Interactive plot saved to {full_output_path} successfully. \n")
 
@@ -418,6 +478,6 @@ if __name__ == "__main__":
     if SAVE_NPY:
         save_cluster_data_to_npy(idx, coords, clusters, cluster_names, metadatas, db_path)
     
-    # Generate interactive visualization
-    plot_2d_clusters(coords, metadatas, cluster_names, db_path)
+    # Generate interactive visualization and save it as an HTML file
+    plot_and_save_2d_clusters(coords, metadatas, cluster_names, db_path)
 
