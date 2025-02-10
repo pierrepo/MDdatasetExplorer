@@ -175,7 +175,8 @@ def clean_and_concatenate(data: dict, excluded_keys=None, words_to_remove=None) 
     data : dict
         The dictionary containing the data.
     excluded_keys : list, optional
-        Keys to exclude from the concatenation (default: ['id', 'origin', 'author', 'date_creation']).
+        Keys to exclude from the concatenation (default: ['id', 'origin', 'author', 'date_creation', 
+        url, 'dt', 'nsteps', 'temperature', 'thermostat', 'barostat']).
     words_to_remove : list, optional
         Words or phrases to remove from the concatenated string (default: None).
 
