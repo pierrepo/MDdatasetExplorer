@@ -7,7 +7,6 @@ The pipeline consists of the following steps:
     1. **Create Datasets** (`src/utils/create_datasets.py`): Load and preprocess datasets from Parquet files.
     2. **Generate Embeddings** (`src/utils/create_embeddings.py`): Generate embeddings using the specified model.
     3. **Create Interactive Plot** (`src/utils/create_interactive_plot.py`): Reduce the dimensionality of the embeddings, cluster them, and create an interactive 2D plot.
-    4. **Generate Graph** (`src/utils/create_graph.py`): Create a graph where connections between nodes are based on distances in the embedding space.
     5. **Launch Streamlit App** (`src/utils/streamlit_app.py`): Run a Streamlit app to explore datasets through two approaches:
        - Visualization of dimensionality-reduced embeddings (2D interactive plot).
        - Graph-based exploration where connections between data points represent their distances in the embedding space.
@@ -31,14 +30,12 @@ Arguments:
 
 Example:
 ========
-    python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "extended" 
-                                --reduction_method "umap" --cluster_method "knn"
+    python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "basic" --reduction_method "umap" --cluster_method "knn"
 
 This command will : 
     1. Create datasets as JSON files in the `results/datasets` directory.
     2. Create embeddings using the `all-MiniLM-L6-v2` model for the `extended` dataset in the `results/embeddings` directory.
     3. Create an interactive plot (HTML) of the embeddings reduced using UMAP and clustered with KNN in the `results/plots` directory.
-    4. Create a graph of the embeddings in the `results/graphs` directory.
     5. Launch a Streamlit app to explore the datasets.
 
 """
@@ -139,19 +136,15 @@ def main(model_name: str, dataset_name: str, reduction_method: str, cluster_meth
             "--cluster_method", cluster_method
         ])
 
-        # Step 4: Create graph based on embeddings
-        logger.info("Step 4: Creating graph based on embeddings...")
-        run_command([
-            "python", "src/utils/create_graph.py",
-            "--db-path", f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}",
-        ])
-
-        # Step 5: Run Streamlit app
-        logger.info("Step 5: Running Streamlit app...")
+        # Step 4: Run Streamlit app
+        logger.info("Step 4: Running Streamlit app...")
         run_command([
             "streamlit", "run", "src/utils/streamlit_app.py", "--",
             "--db-path",
-            f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}"
+            f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}",
+            "--html-path",
+            f"results/2d_projections/plot_{dataset_name}_dataset_{model_name}_{reduction_method}_{cluster_method}.html"
+
         ])
 
         # End of pipeline
