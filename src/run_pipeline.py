@@ -143,8 +143,7 @@ def main(model_name: str, dataset_name: str, reduction_method: str, cluster_meth
             "--db-path",
             f"results/embeddings/chroma_db_{dataset_name}_dataset_{model_name}",
             "--html-path",
-            f"results/2d_projections/plot_{dataset_name}_dataset_{model_name}_{reduction_method}_{cluster_method}.html"
-
+            f"results/2d_projections/plot_chroma_db_{dataset_name}_dataset_{model_name}_{reduction_method}_{cluster_method}.html"
         ])
 
         # End of pipeline
