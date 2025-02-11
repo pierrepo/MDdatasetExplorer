@@ -294,21 +294,24 @@ def process_search_results(results):
     similarities = results["distances"][0]
     documents = results["documents"][0]
     dataset_info = []
+
     for doc in documents:
         doc_data = json.loads(doc)  # parse individual JSON string
         dataset_info.append({
-            "title": doc_data["title"],
-            "keywords": doc_data["keywords"],
-            "date_creation": doc_data["date_creation"],
-            "description": doc_data["description"], 
-            "authors": doc_data["author"],
-            "software_engine": doc_data["software_engines"],
-            "origin": doc_data["origin"],
-            "url": doc_data["url"]
+            "title": doc_data.get("title", "No Title"),
+            "keywords": doc_data.get("keywords", "No Keywords"),
+            "date_creation": doc_data.get("date_creation", "No Date"),
+            "description": doc_data.get("description", "No Description"),
+            "authors": doc_data.get("authors", "No Authors"),
+            "software_engine": doc_data.get("software_engine", "No Software Engine"),
+            "origin": doc_data.get("origin", "No Origin"),
+            "url": doc_data.get("url", "No URL"),
         })
+    
     df = pd.DataFrame(dataset_info)
     df["similarity"] = similarities
     df_sorted = df.sort_values(by="similarity", ascending=False).reset_index(drop=True)
+    
     return df_sorted
 
 
