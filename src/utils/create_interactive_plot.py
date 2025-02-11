@@ -30,7 +30,7 @@ This command will:
 - Generate descriptive cluster names using GPT-4 (OpenAI) based on the titles of the embeddings in each cluster.
 - Save coordinates of the reduced embeddings and cluster labels to `plot_extended_dataset_all-MiniLM-L6-v2_umap_hdbscan.npy`
 - Generate an interactive 2D plot using `datamapplot` with clustered data.
-- Save the HTML plot to `results/2d_projections/plot_extended_dataset_all-MiniLM-L6-v2_umap_hdbscan.html`.
+- Save the HTML plot to `results/2d_projections/plot_chroma_db_extended_dataset_all-MiniLM-L6-v2_umap_hdbscan.html`.
 """
 
 # METADATA

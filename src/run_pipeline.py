@@ -30,12 +30,12 @@ Arguments:
 
 Example:
 ========
-    python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "basic" --reduction_method "umap" --cluster_method "knn"
+    python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "basic" --reduction_method "umap" --cluster_method "hdbscan"
 
 This command will : 
     1. Create datasets as JSON files in the `results/datasets` directory.
     2. Create embeddings using the `all-MiniLM-L6-v2` model for the `extended` dataset in the `results/embeddings` directory.
-    3. Create an interactive plot (HTML) of the embeddings reduced using UMAP and clustered with KNN in the `results/plots` directory.
+    3. Create an interactive plot (HTML) of the embeddings reduced using UMAP and clustered with hdbscan in the `results/2d_projections` directory.
     5. Launch a Streamlit app to explore the datasets.
 
 """
