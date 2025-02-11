@@ -118,7 +118,7 @@ def load_embeddings(db_path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     if not collections:
         raise ValueError(f"No collections found in the database at {db_path}.")
 
-    collection_name = collections[0]
+    collection_name = client.list_collections()[0]
     db = client.get_collection(name=collection_name)
 
     data = db.get(include=["embeddings", "metadatas"])
