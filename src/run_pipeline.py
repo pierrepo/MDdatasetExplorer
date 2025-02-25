@@ -34,7 +34,7 @@ Example:
 
 This command will : 
     1. Create datasets as JSON files in the `results/datasets` directory.
-    2. Create embeddings using the `all-MiniLM-L6-v2` model for the `extended` dataset in the `results/embeddings` directory.
+    2. Create embeddings using the `all-MiniLM-L6-v2` model for the `basic` dataset in the `results/embeddings` directory.
     3. Create an interactive plot (HTML) of the embeddings reduced using UMAP and clustered with hdbscan in the `results/2d_projections` directory.
     5. Launch a Streamlit app to explore the datasets.
 
