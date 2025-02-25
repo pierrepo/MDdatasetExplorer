@@ -1,4 +1,3 @@
-
 <h1 align="center">
   <img style="vertical-align:middle; width:70%; position:fixed;">
   MDdatasetExplorer
@@ -13,7 +12,6 @@
     <img alt="Made with Python" src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg?color=%23539fc9">
     <img alt="BSD-3 Clause License" src="https://img.shields.io/github/license/pierrepo/MDdatasetExplorer?style=flat&color=%23539fc9&link=https%3A%2F%2Fgithub.com%2Fpierrepo%2FMDdatasetExplorer%2Fblob%2Fmain%2FLICENSE">
 </p>
-
 
 ## Setup
 
@@ -46,7 +44,6 @@ conda activate mddatasetexplorer-env
 export OPENAI_API_KEY=XXXXX...
 ```
 
-
 ## Usage
 
 To load MDdatasetExplorer, run the following command:
@@ -55,22 +52,22 @@ To load MDdatasetExplorer, run the following command:
 python src/run_pipeline.py --model_name <model_name> --dataset_name <dataset_name> --reduction_method <reduction_method> --cluster_method <cluster_method>
 ```
 
-Where: 
+Where:
+
 - `model_name` is the name of the model to use for embeddings creation.
-- `dataset_name` is the name of the dataset to explore.
+- `dataset_name` is the name of the dataset to explore. Choose between `basic`, `extended` and `detailed`
 - `reduction_method` is the method to use for dimensionality reduction. Choose between `umap` and `tsne`.
 - `cluster_method` is the method to use for clustering. Choose between `knn` and `dbscan`.
-
 
 Example:
 
 ```bash
-python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "basic" --reduction_method "umap" --cluster_method "knn"
+python src/run_pipeline.py --model_name "all-MiniLM-L6-v2" --dataset_name "basic" --reduction_method "umap" --cluster_method "hdbscan"
 ```
 
-This command will: 
-1. **Create datasets** (run `src/utils/create_datasets.py`): Load and preprocess datasets from Parquet files.
-2. **Create TF-IDF vectors** (run `src/utils/create_tfidf_vectors.py`): Generate TF-IDF vectors from the preprocessed datasets. [TODO]
-3. **Create embeddings** (run `src/utils/create_embeddings.py`): Generate embeddings using the specified model.
-4. **Create graph** (run `src/utils/create_graph.py`): Create a graph based on the embeddings. [TODO]
-5. **Create Streamlit app** (run `src/utils/streamlit_app.py`): Run a Streamlit app to explore the datasets.
+This command will:
+
+1. **Create datasets** (run `src/utils/create_datasets.py`): Load and preprocess datasets from Parquet files as JSON files in the `results/datasets` directory.
+2. **Create embeddings** (run `src/utils/create_embeddings.py`): Create embeddings using the `all-MiniLM-L6-v2` model for the `basic` dataset.
+3. **Create an interactive plot** (run `src/utils/create_interactive_plot.py`): Create the html plot of the embeddings reduced using UMAP and clustered with hdbscan in the `results/2d_projections` directory.
+4. **Create Streamlit app** (run `src/utils/streamlit_app.py`): Launch a Streamlit app to explore the datasets.
